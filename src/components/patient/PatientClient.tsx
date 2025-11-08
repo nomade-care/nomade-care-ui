@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFormState } from 'react-dom';
+import { useState, useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,7 @@ export function PatientClient() {
   const [selectedResponse, setSelectedResponse] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [formState, formAction] = useFormState(sendPatientResponse, { status: '', message: '' });
+  const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
 
   useEffect(() => {
     const handleDoctorMessage = () => {
@@ -135,7 +135,7 @@ export function PatientClient() {
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormState(sendPatientResponse, { status: '', message: '' });
+  const { pending } = useFormStatus();
 
   return (
     <Button type="submit" className="w-full mt-6" size="lg" disabled={disabled || pending}>

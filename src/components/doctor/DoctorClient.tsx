@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Mic, Send, Bot, Square, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ export function DoctorClient() {
   const [emotionalInsights, setEmotionalInsights] = useLocalStorage<string>('emotionalInsights', 'Awaiting patient response...');
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
-  const [formState, formAction] = useFormState(sendDoctorAudio, { status: '', message: '' });
+  const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
 
   useEffect(() => {
     const handlePatientResponse = () => {
