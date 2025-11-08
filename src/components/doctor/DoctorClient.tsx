@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState, useCallback } from 'react';
+import { useState, useRef, useEffect, useActionState } from 'react';
 import { Mic, Send, Bot, Square, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ export function DoctorClient() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDataUri, setAudioDataUri] = useState<string>('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -31,6 +32,14 @@ export function DoctorClient() {
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
   const { status, message, originalAudioUrl, translatedAudioUrl } = formState || { status: '', message: '' };
+
+  const blobToDataURL = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
 
   useEffect(() => {
     if (status === 'success' && originalAudioUrl && translatedAudioUrl) {
@@ -51,7 +60,8 @@ export function DoctorClient() {
     } else if (status === 'error') {
       toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [status, message, originalAudioUrl, translatedAudioUrl, setConversation, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, message, originalAudioUrl, translatedAudioUrl]);
   
   useEffect(() => {
     const handlePatientResponse = (e: StorageEvent) => {
@@ -77,8 +87,16 @@ export function DoctorClient() {
     return () => {
       window.removeEventListener('storage', handlePatientResponse);
     };
-  }, [setConversation, setEmotionalInsights, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  const handleAudioBlob = async (blob: Blob) => {
+    setAudioBlob(blob);
+    const url = URL.createObjectURL(blob);
+    setAudioUrl(url);
+    const dataUri = await blobToDataURL(blob);
+    setAudioDataUri(dataUri);
+  };
 
   const startRecording = async () => {
     try {
@@ -92,9 +110,7 @@ export function DoctorClient() {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+        handleAudioBlob(blob);
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -116,22 +132,7 @@ export function DoctorClient() {
     setAudioBlob(null);
     if(audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
-  };
-  
-  const blobToDataURL = (blob: Blob): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-
-  const handleSend = async (formData: FormData) => {
-    if (!audioBlob) return;
-    const audioDataUri = await blobToDataURL(audioBlob);
-    formData.set('audioDataUri', audioDataUri);
-    formData.set('language', patientLanguage);
-    formAction(formData);
+    setAudioDataUri('');
   };
   
   return (
@@ -172,7 +173,9 @@ export function DoctorClient() {
                       <Square />
                   </Button>
               ) : audioUrl ? (
-                  <form action={handleSend}>
+                  <form action={formAction}>
+                      <input type="hidden" name="audioDataUri" value={audioDataUri} />
+                      <input type="hidden" name="language" value={patientLanguage} />
                       <Button type="submit" size="icon" disabled={!audioBlob} className="rounded-full w-14 h-14">
                           <Send />
                       </Button>

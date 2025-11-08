@@ -25,6 +25,8 @@ export function PatientClient() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [responseText, setResponseText] = useState('');
+  const [communicationData, setCommunicationData] = useState('');
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
@@ -33,6 +35,14 @@ export function PatientClient() {
 
   const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
   const { status, message, insights, originalResponse } = formState || { status: '', message: '' };
+
+  const blobToDataURL = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
 
   useEffect(() => {
     if (status === 'success' && insights && originalResponse) {
@@ -59,12 +69,15 @@ export function PatientClient() {
       
       clearRecording();
       setResponseText('');
+      setCommunicationData('');
+      formRef.current?.reset();
       toast({ title: "Response Sent", description: "Your response has been sent to the doctor." });
 
     } else if (status === 'error') {
       toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [status, message, insights, originalResponse, setConversation, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, message, insights, originalResponse]);
   
 
   const handleNewDoctorMessage = useCallback(() => {
@@ -72,7 +85,8 @@ export function PatientClient() {
     if (lastMessage && lastMessage.from === 'doctor') {
       toast({ title: 'New Message', description: 'You have a new message from your doctor.' });
     }
-  }, [conversation, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation]);
 
   useEffect(() => {
     handleNewDoctorMessage();
@@ -88,6 +102,14 @@ export function PatientClient() {
     };
   }, [handleNewDoctorMessage, setConversation]);
 
+  const handleAudioBlob = async (blob: Blob) => {
+    setAudioBlob(blob);
+    const url = URL.createObjectURL(blob);
+    setAudioUrl(url);
+    setResponseText(''); // Clear text if audio is recorded
+    const dataUri = await blobToDataURL(blob);
+    setCommunicationData(dataUri);
+  };
 
   const startRecording = async () => {
     try {
@@ -101,10 +123,7 @@ export function PatientClient() {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        setResponseText(''); // Clear text if audio is recorded
+        handleAudioBlob(blob);
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -130,28 +149,22 @@ export function PatientClient() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setAudioBlob(null);
-  };
-  
-  const blobToDataURL = (blob: Blob): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-
-  const handleSend = async (formData: FormData) => {
-    let communicationData = '';
-    if (audioBlob) {
-      communicationData = await blobToDataURL(audioBlob);
-    } else if (responseText) {
-      communicationData = responseText;
-    } else {
-      toast({ variant: 'destructive', title: "Error", description: "Please record or type a response." });
-      return;
+    if (!responseText) {
+      setCommunicationData('');
     }
-    formData.set('communicationData', communicationData);
-    formAction(formData);
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setResponseText(text);
+    if (text) {
+      clearRecording();
+      setCommunicationData(text);
+    } else if (audioBlob) {
+      blobToDataURL(audioBlob).then(setCommunicationData);
+    } else {
+      setCommunicationData('');
+    }
   };
 
   return (
@@ -187,7 +200,7 @@ export function PatientClient() {
         </CardContent>
       </Card>
       
-      <form action={handleSend} ref={formRef}>
+      <form action={formAction} ref={formRef}>
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>Send a Response</CardTitle>
@@ -231,14 +244,12 @@ export function PatientClient() {
                     placeholder="Or type your response here..."
                     className="bg-muted"
                     value={responseText}
-                    onChange={(e) => {
-                      setResponseText(e.target.value);
-                      if (e.target.value) clearRecording(); // Clear audio if text is entered
-                    }}
+                    onChange={handleTextChange}
                   />
                 </div>
                 <div className='flex justify-end'>
-                  <Button type="submit" disabled={!audioBlob && !responseText}>
+                  <input type="hidden" name="communicationData" value={communicationData} />
+                  <Button type="submit" disabled={!communicationData}>
                     <Send className='mr-2'/>
                     Send Response
                   </Button>
