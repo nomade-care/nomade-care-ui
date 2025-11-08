@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect, useActionState, useCallback } from 'react';
 import { Mic, Send, Bot, Square, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import type { ConversationMessage, PatientResponsePayload } from '@/lib/types';
+import type { ConversationMessage } from '@/lib/types';
 import { sendDoctorAudio } from '@/lib/actions';
 import { Waveform } from '@/components/shared/Waveform';
 import { LanguageSelector } from '../shared/LanguageSelector';
 import { MessageBubble } from '../shared/MessageBubble';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { generateWaveform } from '@/lib/waveform';
+import { simulatedConversation } from '@/lib/conversation-data';
 
 export function DoctorClient() {
   const [isRecording, setIsRecording] = useState(false);
@@ -25,50 +25,15 @@ export function DoctorClient() {
 
   const { toast } = useToast();
 
-  const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation', []);
+  const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation', simulatedConversation);
   const [emotionalInsights, setEmotionalInsights] = useLocalStorage<string>('emotionalInsights', 'Awaiting patient response...');
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
   const { status, message, originalAudioUrl, translatedAudioUrl } = formState || { status: '', message: '' };
 
-
-  const handlePatientResponse = useCallback(() => {
-    const responseData = localStorage.getItem('patientResponse');
-    if (responseData) {
-        try {
-            const { audioUrl, insights }: PatientResponsePayload = JSON.parse(responseData);
-            setEmotionalInsights(insights);
-            setConversation(prev => [...prev, {
-              id: `patient-${Date.now()}`,
-              from: 'patient',
-              audioUrl,
-              waveform: generateWaveform(audioUrl, 50),
-              timestamp: Date.now()
-            }]);
-            localStorage.removeItem('patientResponse');
-        } catch (error) {
-            console.error("Failed to parse patient response", error);
-        }
-    }
-  }, [setConversation, setEmotionalInsights]);
-
   useEffect(() => {
-    const handleStorageEvent = (e: StorageEvent) => {
-        if (e.key === 'patientResponse') {
-            handlePatientResponse();
-        }
-    };
-    window.addEventListener('storage', handleStorageEvent);
-
-    return () => {
-        window.removeEventListener('storage', handleStorageEvent);
-    }
-  }, [handlePatientResponse]);
-
-
-  useEffect(() => {
-    if (status === 'success' && originalAudioUrl) {
+    if (status === 'success' && originalAudioUrl && translatedAudioUrl) {
       setConversation(prev => [...prev, { 
         id: `doc-${Date.now()}`, 
         from: 'doctor', 
@@ -78,8 +43,8 @@ export function DoctorClient() {
       }]);
       
       const doctorMessage = translatedAudioUrl;
-      localStorage.setItem('doctorMessage', doctorMessage!);
-      window.dispatchEvent(new StorageEvent('storage', { key: 'doctorMessage', newValue: doctorMessage! }));
+      localStorage.setItem('doctorMessage', doctorMessage);
+      window.dispatchEvent(new StorageEvent('storage', { key: 'doctorMessage', newValue: doctorMessage }));
       
       clearRecording();
       toast({ title: "Message Sent", description: message });
@@ -135,17 +100,14 @@ export function DoctorClient() {
       reader.readAsDataURL(blob);
     });
 
-  const handleSend = async () => {
+  const handleSend = async (formData: FormData) => {
     if (!audioBlob) return;
     const audioDataUri = await blobToDataURL(audioBlob);
-    const formData = new FormData();
-    formData.append('audioDataUri', audioDataUri);
-    formData.append('language', patientLanguage);
+    formData.set('audioDataUri', audioDataUri);
+    formData.set('language', patientLanguage);
     formAction(formData);
   };
   
-  const { pending } = useFormStatus();
-
   return (
     <div className="grid md:grid-cols-3 h-full">
       <div className="md:col-span-2 flex flex-col h-full bg-card">
@@ -185,8 +147,8 @@ export function DoctorClient() {
                   </Button>
               ) : audioUrl ? (
                   <form action={handleSend}>
-                      <Button type="submit" size="icon" disabled={!audioBlob || pending} className="rounded-full w-14 h-14">
-                          {pending ? <Loader2 className="animate-spin" /> : <Send />}
+                      <Button type="submit" size="icon" disabled={!audioBlob} className="rounded-full w-14 h-14">
+                          <Send />
                       </Button>
                   </form>
               ) : (

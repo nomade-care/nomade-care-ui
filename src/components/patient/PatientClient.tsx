@@ -1,83 +1,55 @@
 'use client';
 
-import { useState, useEffect, useActionState, useCallback, useRef } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
 import { AudioPlayer } from '@/components/shared/AudioPlayer';
-import { sendPatientResponse } from '@/lib/actions';
-import { Bell, Loader2, MessageCircle, Send, Mic, Square, Trash2 } from 'lucide-react';
-import type { PatientResponsePayload } from '@/lib/types';
+import { Bell, MessageCircle, Mic, Square, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { generateWaveform } from '@/lib/waveform';
 import { Waveform } from '../shared/Waveform';
 import { Textarea } from '../ui/textarea';
+import { simulatedConversation } from '@/lib/conversation-data';
+import type { ConversationMessage } from '@/lib/types';
+import { MessageBubble } from '../shared/MessageBubble';
+import { ScrollArea } from '../ui/scroll-area';
 
 export function PatientClient() {
-  const [doctorMessage, setDoctorMessage] = useState<string | null>(null);
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
-  const [responseText, setResponseText] = useState('');
+  const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation', simulatedConversation);
   
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const { toast } = useToast();
 
-  const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
-  const { status, message, audioUrl: responseAudioUrl, insights } = formState || { status: '', message: '' };
-
-  const handleDoctorMessage = useCallback(() => {
-    const message = localStorage.getItem('doctorMessage');
-    if (message) {
-      setDoctorMessage(message);
-      localStorage.removeItem('doctorMessage');
+  const handleNewDoctorMessage = useCallback(() => {
+    const lastMessage = conversation[conversation.length - 1];
+    if (lastMessage && lastMessage.from === 'doctor') {
       toast({ title: 'New Message', description: 'You have a new message from your doctor.' });
     }
-  }, [toast]);
+  }, [conversation, toast]);
 
   useEffect(() => {
-    handleDoctorMessage();
-
-    const handleStorageEvent = (e: StorageEvent) => {
-      if (e.key === 'doctorMessage') {
-        handleDoctorMessage();
+    handleNewDoctorMessage();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'conversation') {
+        const newConversation = JSON.parse(e.newValue || '[]');
+        setConversation(newConversation);
+        handleNewDoctorMessage();
       }
     };
-
-    window.addEventListener('storage', handleStorageEvent);
-
+    window.addEventListener('storage', handleStorageChange);
     return () => {
-      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, [handleDoctorMessage]);
+  }, [handleNewDoctorMessage, setConversation]);
 
-  useEffect(() => {
-    if (status === 'success' && responseAudioUrl && insights) {
-      const patientResponse: PatientResponsePayload = {
-        audioUrl: responseAudioUrl,
-        insights: insights,
-      };
-      localStorage.setItem('patientResponse', JSON.stringify(patientResponse));
-      window.dispatchEvent(
-        new StorageEvent('storage', {
-          key: 'patientResponse',
-          newValue: JSON.stringify(patientResponse),
-        })
-      );
-
-      toast({ title: 'Response Sent', description: 'Your response has been sent to the doctor.' });
-      clearRecording();
-      setResponseText('');
-    } else if (status === 'error') {
-      toast({ variant: 'destructive', title: 'Error', description: message });
-    }
-  }, [status, message, responseAudioUrl, insights, toast]);
 
   const startRecording = async () => {
     try {
@@ -91,7 +63,6 @@ export function PatientClient() {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         stream.getTracks().forEach((track) => track.stop());
@@ -116,69 +87,55 @@ export function PatientClient() {
   };
 
   const clearRecording = () => {
-    setAudioBlob(null);
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
   };
   
-  const blobToDataURL = (blob: Blob): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  
-  const handleSend = async (formData: FormData) => {
-    if (!audioBlob) return;
-    const audioDataUri = await blobToDataURL(audioBlob);
-    formData.set('audioDataUri', audioDataUri);
-    formAction(formData);
-  };
+  const lastDoctorMessage = [...conversation].reverse().find(m => m.from === 'doctor');
 
   return (
-    <div className="container mx-auto max-w-2xl py-8">
+    <div className="container mx-auto max-w-4xl py-8">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-6 w-6 text-primary" />
-                <span>Doctor's Message</span>
+                <span>Conversation</span>
               </CardTitle>
-              <CardDescription>Listen to the latest message from your doctor.</CardDescription>
+              <CardDescription>Listen to the latest messages from your doctor and review your responses.</CardDescription>
             </div>
             <LanguageSelector language={patientLanguage} onLanguageChange={setPatientLanguage} />
           </div>
         </CardHeader>
         <CardContent>
-          {doctorMessage ? (
-            <div className="p-4 rounded-lg bg-muted">
-              <AudioPlayer audioUrl={doctorMessage} waveform={generateWaveform(doctorMessage, 50)} />
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-6">
+              {conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+              {conversation.length === 0 && (
+                 <Alert className="bg-background">
+                  <Bell className="h-4 w-4" />
+                  <AlertTitle>No messages yet</AlertTitle>
+                  <AlertDescription>
+                    Check back later for messages from your doctor.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-          ) : (
-            <Alert className="bg-background">
-              <Bell className="h-4 w-4" />
-              <AlertTitle>No new messages</AlertTitle>
-              <AlertDescription>
-                You are all caught up. Check back later for messages from your doctor.
-              </AlertDescription>
-            </Alert>
-          )}
+          </ScrollArea>
         </CardContent>
       </Card>
-
+      
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Send a Response</CardTitle>
-          <CardDescription>Record a message or type a response to send to your doctor.</CardDescription>
+          <CardTitle>Simulate a Response</CardTitle>
+          <CardDescription>Record a message or type a response to simulate sending a message to your doctor.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleSend}>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 {isRecording ? (
-                  <Button size="icon" onClick={stopRecording} className="bg-destructive hover:bg-destructive/90 rounded-full w-14 h-14">
+                  <Button size="icon" onClick={stopRecording} className="bg-destructive hover:bg-destructive/90 rounded-full w-14 h-14" type="button">
                     <Square />
                   </Button>
                 ) : (
@@ -210,36 +167,12 @@ export function PatientClient() {
                 <Textarea
                   name="responseText"
                   placeholder="Or type your response here..."
-                  value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
                   className="bg-muted"
                 />
               </div>
             </div>
-            <SubmitButton disabled={!audioBlob && !responseText} />
-          </form>
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function SubmitButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" className="w-full mt-6" size="lg" disabled={disabled || pending}>
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Sending...
-        </>
-      ) : (
-        <>
-          <Send className="mr-2 h-4 w-4" />
-          Send Response
-        </>
-      )}
-    </Button>
   );
 }
