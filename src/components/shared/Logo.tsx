@@ -5,7 +5,7 @@ import Image from "next/image";
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <Image
-      src="/nomadecare-logo.png"
+      src="/logo.jpg"
       alt="Nomadecare Logo"
       width={200}
       height={40}
