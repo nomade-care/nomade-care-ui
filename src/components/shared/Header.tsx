@@ -12,9 +12,8 @@ export function Header({ appName }: HeaderProps) {
     <header className="w-full p-4 border-b bg-card">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" className="flex items-center gap-3">
-          <Logo className="h-8 w-8" />
-          <div className='flex items-baseline gap-2'>
-            <span className="text-xl font-bold font-headline text-primary">MediVoxAI</span>
+          <Logo className="h-8 w-auto" />
+          <div className='hidden sm:flex items-baseline gap-2'>
             <span className='text-muted-foreground'>|</span>
             <span className="text-lg text-foreground">{appName}</span>
           </div>

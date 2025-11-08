@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'MediVoxAI',
+  title: 'NomadCare',
   description: 'AI-powered communication for doctors and patients.',
 };
 

@@ -9,8 +9,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <header className="mb-12 text-center">
         <div className="flex justify-center items-center gap-4 mb-4">
-          <Logo className="h-16 w-16" />
-          <h1 className="text-5xl font-bold font-headline text-primary">MediVoxAI</h1>
+          <Logo className="h-16 w-auto" />
         </div>
         <p className="text-lg text-muted-foreground max-w-2xl">
           Seamless, AI-powered communication bridging language barriers and providing emotional insights for better healthcare.
@@ -50,7 +49,7 @@ export default function Home() {
       </main>
 
       <footer className="mt-12 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} MediVoxAI. Revolutionizing patient care.</p>
+        <p>&copy; {new Date().getFullYear()} NomadCare. Revolutionizing patient care.</p>
       </footer>
     </div>
   );
