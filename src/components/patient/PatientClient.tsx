@@ -22,7 +22,7 @@ export function PatientClient() {
   const { toast } = useToast();
 
   const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
-  const { status, message, audioUrl, insights } = formState;
+  const { status, message, audioUrl, insights } = formState || { status: '', message: '' };
 
 
   const handleDoctorMessage = useCallback(() => {
@@ -65,7 +65,8 @@ export function PatientClient() {
     } else if (status === 'error') {
       toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [status, message, audioUrl, insights, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, message, audioUrl, insights]);
 
   return (
     <div className="container mx-auto max-w-2xl py-8">

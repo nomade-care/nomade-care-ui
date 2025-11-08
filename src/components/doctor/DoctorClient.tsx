@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useActionState } from 'react';
+import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Mic, Send, Bot, Square, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ export function DoctorClient() {
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
-  const { status, message, originalAudioUrl, translatedAudioUrl } = formState;
+  const { status, message, originalAudioUrl, translatedAudioUrl } = formState || { status: '', message: '' };
 
 
   const handlePatientResponse = useCallback(() => {
@@ -87,7 +86,8 @@ export function DoctorClient() {
     } else if (status === 'error') {
       toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [status, message, originalAudioUrl, translatedAudioUrl, setConversation, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, message, originalAudioUrl, translatedAudioUrl]);
 
   const startRecording = async () => {
     try {
