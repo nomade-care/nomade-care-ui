@@ -11,6 +11,7 @@ type AudioPlayerProps = {
   waveform: number[];
   colorClass?: string;
   isPatientMessage?: boolean;
+  onInsightsUpdate?: (insights: string) => void;
 };
 
 export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary", isPatientMessage = false }: AudioPlayerProps) {

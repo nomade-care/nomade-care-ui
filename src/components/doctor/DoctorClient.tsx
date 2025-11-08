@@ -29,7 +29,7 @@ export function DoctorClient() {
   const { toast } = useToast();
 
   const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation_v2', simulatedConversation);
-  const [emotionalInsights, setEmotionalInsights] = useLocalStorage<string>('emotionalInsights', 'Awaiting patient response...');
+  const [emotionalInsights, setEmotionalInsights] = useState<string>('Awaiting patient response...');
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
@@ -143,7 +143,7 @@ export function DoctorClient() {
         <div className="flex-1 p-6 overflow-hidden">
            <ScrollArea className="h-full pr-4">
             <div className="space-y-6">
-              {isMounted && conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+              {isMounted && conversation.map((msg) => <MessageBubble key={msg.id} message={msg} onInsightsUpdate={setEmotionalInsights} />)}
             </div>
            </ScrollArea>
         </div>

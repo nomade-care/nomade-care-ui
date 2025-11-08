@@ -10,9 +10,10 @@ import { useState, useEffect } from 'react';
 
 type MessageBubbleProps = {
   message: ConversationMessage;
+  onInsightsUpdate?: (insights: string) => void;
 };
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onInsightsUpdate }: MessageBubbleProps) {
   const isDoctor = message.from === 'doctor';
   const [isMounted, setIsMounted] = useState(false);
 
@@ -29,11 +30,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </Avatar>
       <div className={`flex flex-col w-full max-w-[400px] ${isDoctor ? 'items-start' : 'items-end'}`}>
         <div className={`p-3 rounded-lg w-full ${isDoctor ? 'bg-muted rounded-bl-none' : 'bg-primary/20 rounded-br-none'}`}>
-          <AudioPlayer 
-            audioUrl={message.audioUrl} 
-            waveform={message.waveform} 
+          <AudioPlayer
+            audioUrl={message.audioUrl}
+            waveform={message.waveform}
             colorClass={isDoctor ? "text-foreground" : "text-primary"}
             isPatientMessage={!isDoctor}
+            onInsightsUpdate={onInsightsUpdate}
           />
         </div>
         <span className="text-xs text-muted-foreground mt-1 px-1">
