@@ -2,49 +2,61 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// Custom event to notify the same tab about storage changes
 function dispatchStorageEvent<T>(key: string, newValue: T) {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new StorageEvent('storage', { key, newValue: JSON.stringify(newValue) }));
+    // This custom event is to notify other useLocalStorage hooks in the same tab.
+    const event = new CustomEvent('local-storage-change', { detail: { key, newValue: JSON.stringify(newValue) } });
+    window.dispatchEvent(event);
   }
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-
-  useEffect(() => {
-    // This effect runs only on the client
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    // This function now only runs once on initialization.
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
     try {
       const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item));
-      } else {
-        window.localStorage.setItem(key, JSON.stringify(initialValue));
-        setStoredValue(initialValue);
-      }
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.log(error);
-      setStoredValue(initialValue);
+      console.error(error);
+      return initialValue;
     }
-  }, [key, initialValue]);
-
-
+  });
+  
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
-        try {
-          setStoredValue(JSON.parse(e.newValue));
-        } catch (error) {
-          console.log(error);
+    const handleStorageChange = (e: StorageEvent | CustomEvent) => {
+      let eventKey: string | null = null;
+      let eventNewValue: string | null = null;
+  
+      if (e instanceof StorageEvent) { // From other tabs
+        eventKey = e.key;
+        eventNewValue = e.newValue;
+      } else if (e instanceof CustomEvent && e.type === 'local-storage-change') { // From same tab
+        eventKey = e.detail.key;
+        eventNewValue = e.detail.newValue;
+      }
+      
+      if (eventKey === key) {
+        if (eventNewValue) {
+          try {
+            setStoredValue(JSON.parse(eventNewValue));
+          } catch (error) {
+            console.error(error);
+          }
+        } else {
+           setStoredValue(initialValue);
         }
-      } else if (e.key === key && !e.newValue) {
-        setStoredValue(initialValue);
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('local-storage-change', handleStorageChange as EventListener);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('local-storage-change', handleStorageChange as EventListener);
     };
   }, [key, initialValue]);
 
@@ -58,7 +70,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
           dispatchStorageEvent(key, valueToStore);
         }
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     },
     [key, storedValue]
