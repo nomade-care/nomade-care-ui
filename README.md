@@ -1,15 +1,17 @@
 # NomadCare - AI-Powered Medical Communication Platform
 
-NomadCare is a modern, AI-driven web application designed to bridge communication gaps between doctors and patients, especially those who speak different languages. It provides separate portals for doctors and patients to exchange audio messages, leveraging generative AI for real-time translation and emotional analysis.
+NomadCare is a modern, AI-driven web application designed to bridge communication gaps between doctors and patients, especially those who speak different languages. It provides separate portals for doctors and patients to exchange audio messages, leveraging generative AI for real-time translation and external emotion detection APIs for intelligent analysis.
 
 ## ✨ Key Features
 
 -   **Dual Portals**: Separate, tailored user interfaces for doctors and patients.
 -   **Audio Messaging**: Doctors can record and send audio messages. Patients can listen to these messages and review their pre-recorded responses.
 -   **AI-Powered Translation**: Doctor's messages are automatically translated into the patient's preferred language using Google's generative AI models.
--   **AI-Powered Emotion Analysis**: Patient's audio responses are analyzed by a custom API and then summarized by an LLM to provide doctors with concise emotional insights, helping them better understand the patient's state.
+-   **Real-Time Emotion Analysis**: Patient's audio responses are sent to an external emotion detection API that provides detected emotions with confidence scores and intelligent insights. The doctor's panel displays this information with a typewriter animation for an engaging experience.
+-   **Typewriter Animation**: Emotional insights appear with a smooth typing effect, showing static emotion data immediately followed by the AI's intelligent analysis.
 -   **Simulated Conversation**: The application boots up with a pre-populated, simulated conversation to demonstrate the core features without needing initial user input.
 -   **Responsive Design**: A modern, clean UI that works seamlessly across different devices.
+-   **Real-Time Updates**: Insights are updated instantly via direct state management, without localStorage persistence, ensuring fresh analysis for each interaction.
 
 ## 🛠️ Technology Stack
 
@@ -17,11 +19,13 @@ This project is built with a modern, full-stack TypeScript architecture.
 
 -   **Framework**: [Next.js](https://nextjs.org/) (with App Router)
 -   **AI/Generative AI**: [Google AI & Genkit](https://firebase.google.com/docs/genkit) for creating and managing AI flows (translation, text-to-speech, and summarization).
+-   **External APIs**: Custom emotion detection API for real-time audio analysis with intelligent insights.
 -   **UI**: [React](https://react.dev/)
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/) for utility-first styling.
 -   **Component Library**: [ShadCN UI](https://ui.shadcn.com/) for accessible and reusable components.
 -   **Language**: [TypeScript](https://www.typescriptlang.org/)
 -   **Icons**: [Lucide React](https://lucide.dev/)
+-   **Animations**: Custom typewriter effect for dynamic text display.
 
 ## 🚀 Getting Started
 
@@ -72,7 +76,7 @@ Follow these instructions to get a local copy of the project up and running.
 -   `src/app/`: Contains the main pages and layouts for the Next.js App Router (`/`, `/doctor`, `/patient`).
 -   `src/components/`: Shared and feature-specific React components.
     -   `src/components/ui/`: Auto-generated ShadCN UI components.
-    -   `src/components/shared/`: Components used across different parts of the app (e.g., `Header`, `AudioPlayer`).
+    -   `src/components/shared/`: Components used across different parts of the app (e.g., `Header`, `AudioPlayer`, `Typewriter` for animations).
     -   `src/components/doctor/` & `src/components/patient/`: Components specific to each portal.
 -   `src/ai/`: All Genkit-related code.
     -   `src/ai/genkit.ts`: Genkit initialization and configuration.
