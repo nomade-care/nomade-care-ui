@@ -75,7 +75,9 @@ Follow these instructions to get a local copy of the project up and running.
 
 ## 📹 Demo Video
 
-A demonstration video of the application is available. **Important:** The video appears in low quality when viewed directly on Google Drive. For the best viewing experience, please download the video to see it in its original high-quality resolution.
+A demonstration video of the application is available on YouTube: [Watch on YouTube](https://youtu.be/dTb1e9y6OvY)
+
+Alternatively, the video is also available for download. **Important:** The video appears in low quality when viewed directly on Google Drive. For the best viewing experience, please download the video to see it in its original high-quality resolution.
 
 ## 📂 Project Structure
 
