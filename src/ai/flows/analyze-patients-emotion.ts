@@ -15,7 +15,7 @@ const AnalyzePatientsEmotionInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      'The patient audio data as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' // Corrected typo here
+      "The patient audio data as a data URI that must include a MIME type and use Base64 encoding. This can also be a string of text if the patient typed a response. Expected format: 'data:<mimetype>;base64,<encoded_data>' or a simple string."
     ),
 });
 export type AnalyzePatientsEmotionInput = z.infer<typeof AnalyzePatientsEmotionInputSchema>;
@@ -23,7 +23,7 @@ export type AnalyzePatientsEmotionInput = z.infer<typeof AnalyzePatientsEmotionI
 const AnalyzePatientsEmotionOutputSchema = z.object({
   emotionalInsights: z
     .string()
-    .describe('The emotional insights extracted from the patient audio.'),
+    .describe('The emotional insights extracted from the patient audio or text.'),
 });
 export type AnalyzePatientsEmotionOutput = z.infer<typeof AnalyzePatientsEmotionOutputSchema>;
 
@@ -37,10 +37,13 @@ const prompt = ai.definePrompt({
   name: 'analyzePatientsEmotionPrompt',
   input: {schema: AnalyzePatientsEmotionInputSchema},
   output: {schema: AnalyzePatientsEmotionOutputSchema},
-  prompt: `You are an AI assistant specialized in analyzing patient audio for emotional content and providing emotional insights.
+  prompt: `You are an AI assistant specialized in analyzing patient audio and text for emotional content and providing emotional insights.
 
-  Analyze the patient audio and detect the emotions expressed. Provide structured emotional insights that doctors can use to better understand the patient's emotional state.
-  Audio: {{media url=audioDataUri}}`,
+  Analyze the patient's communication (which could be audio or text) and detect the emotions expressed. Provide structured emotional insights that doctors can use to better understand the patient's emotional state.
+  
+  If the input is a data URI, it is audio. If it is a plain string, it is text.
+  
+  Patient Communication: {{#if (startsWith audioDataUri "data:audio")}} {{media url=audioDataUri}} {{else}} {{{audioDataUri}}} {{/if}}`,
 });
 
 const analyzePatientsEmotionFlow = ai.defineFlow(
