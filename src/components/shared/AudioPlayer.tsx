@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { Waveform } from './Waveform';
 import { Button } from '../ui/button';
-import { analyzePatientAudio } from '@/lib/actions';
-import { usePathname } from 'next/navigation';
+
 
 type AudioPlayerProps = {
   audioUrl: string;
@@ -18,7 +17,6 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary", i
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
@@ -45,10 +43,30 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary", i
         }
         await audioRef.current.play();
         setIsPlaying(true);
-        
-        if (isPatientMessage && pathname.includes('/patient')) {
+
+        if (isPatientMessage) {
             try {
-                await analyzePatientAudio(audioUrl);
+                const response = await fetch(audioUrl);
+                if (!response.ok) throw new Error('Failed to fetch audio');
+                const blob = await response.blob();
+                const formData = new FormData();
+                formData.append('audio_file', blob, 'audio.mp3');
+
+                const apiResponse = await fetch('https://b1f8af9fb6b5.ngrok-free.app/api/audio/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!apiResponse.ok) throw new Error('API request failed');
+
+                const data = await apiResponse.json();
+                const insights = JSON.stringify({
+                  staticText: `Detected Emotion: ${data.detected_emotion} (${(data.confidence * 100).toFixed(1)}%)\n\n`,
+                  typedText: data.insights
+                });
+
+                localStorage.setItem('patientResponse', JSON.stringify({ insights }));
+                window.dispatchEvent(new StorageEvent('storage', { key: 'patientResponse', newValue: JSON.stringify({ insights }) }));
             } catch (error) {
                 console.error("Failed to analyze audio:", error);
             }

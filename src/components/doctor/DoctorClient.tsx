@@ -15,6 +15,7 @@ import { MessageBubble } from '../shared/MessageBubble';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { generateWaveform } from '@/lib/waveform';
 import { simulatedConversation } from '@/lib/conversation-data';
+import { Typewriter } from '../shared/Typewriter';
 
 export function DoctorClient() {
   const [isRecording, setIsRecording] = useState(false);
@@ -27,7 +28,7 @@ export function DoctorClient() {
 
   const { toast } = useToast();
 
-  const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation', simulatedConversation);
+  const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation_v2', simulatedConversation);
   const [emotionalInsights, setEmotionalInsights] = useLocalStorage<string>('emotionalInsights', 'Awaiting patient response...');
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
@@ -201,7 +202,15 @@ export function DoctorClient() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Patient Emotion Analysis</AlertTitle>
               <AlertDescription className="prose prose-sm dark:prose-invert">
-                 <p className="text-muted-foreground whitespace-pre-wrap">{emotionalInsights}</p>
+                 {(() => {
+                   try {
+                     const parsed = JSON.parse(emotionalInsights);
+                     if (parsed.staticText && parsed.typedText) {
+                       return <Typewriter staticText={parsed.staticText} typedText={parsed.typedText} className="text-muted-foreground whitespace-pre-wrap" />;
+                     }
+                   } catch {}
+                   return <Typewriter typedText={emotionalInsights} className="text-muted-foreground whitespace-pre-wrap" />;
+                 })()}
               </AlertDescription>
             </Alert>
           </CardContent>
