@@ -26,6 +26,7 @@ export function PatientClient() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [responseText, setResponseText] = useState('');
   const [communicationData, setCommunicationData] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -43,6 +44,10 @@ export function PatientClient() {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (status === 'success' && insights && originalResponse) {
@@ -185,8 +190,8 @@ export function PatientClient() {
         <CardContent>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-6">
-              {conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
-              {conversation.length === 0 && (
+              {isMounted && conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+              {isMounted && conversation.length === 0 && (
                  <Alert className="bg-background">
                   <Bell className="h-4 w-4" />
                   <AlertTitle>No messages yet</AlertTitle>

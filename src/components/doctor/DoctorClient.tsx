@@ -23,6 +23,7 @@ export function DoctorClient() {
   const [audioDataUri, setAudioDataUri] = useState<string>('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   const { toast } = useToast();
 
@@ -40,6 +41,10 @@ export function DoctorClient() {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+    
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (status === 'success' && originalAudioUrl && translatedAudioUrl) {
@@ -142,7 +147,7 @@ export function DoctorClient() {
         <div className="flex-1 p-6 overflow-hidden">
            <ScrollArea className="h-full pr-4">
             <div className="space-y-6">
-              {conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+              {isMounted && conversation.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
             </div>
            </ScrollArea>
         </div>
