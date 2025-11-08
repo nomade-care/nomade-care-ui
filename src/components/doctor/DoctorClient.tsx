@@ -32,39 +32,40 @@ export function DoctorClient() {
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
 
-  useEffect(() => {
-    const handlePatientResponse = () => {
-        const responseData = localStorage.getItem('patientResponse');
-        if (responseData) {
-            try {
-                const { audioUrl, insights }: PatientResponsePayload = JSON.parse(responseData);
-                setEmotionalInsights(insights);
-                setConversation(prev => [...prev, {
-                  id: `patient-${Date.now()}`,
-                  from: 'patient',
-                  audioUrl,
-                  waveform: generateWaveform(),
-                  timestamp: Date.now()
-                }]);
-                // Clear the response so it's not processed again
-                localStorage.removeItem('patientResponse');
-            } catch (error) {
-                console.error("Failed to parse patient response", error);
-            }
+  const handlePatientResponse = useCallback(() => {
+    const responseData = localStorage.getItem('patientResponse');
+    if (responseData) {
+        try {
+            const { audioUrl, insights }: PatientResponsePayload = JSON.parse(responseData);
+            setEmotionalInsights(insights);
+            setConversation(prev => [...prev, {
+              id: `patient-${Date.now()}`,
+              from: 'patient',
+              audioUrl,
+              waveform: generateWaveform(),
+              timestamp: Date.now()
+            }]);
+            // Clear the response so it's not processed again
+            localStorage.removeItem('patientResponse');
+        } catch (error) {
+            console.error("Failed to parse patient response", error);
         }
-    };
-    
+    }
+  }, [setConversation, setEmotionalInsights]);
+
+  useEffect(() => {
     // Listen for storage events from other tabs
-    window.addEventListener('storage', (e) => {
+    const handleStorageEvent = (e: StorageEvent) => {
         if (e.key === 'patientResponse') {
             handlePatientResponse();
         }
-    });
+    };
+    window.addEventListener('storage', handleStorageEvent);
 
     return () => {
-        window.removeEventListener('storage', handlePatientResponse);
+        window.removeEventListener('storage', handleStorageEvent);
     }
-  }, [setConversation, setEmotionalInsights]);
+  }, [handlePatientResponse]);
 
 
   useEffect(() => {

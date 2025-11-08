@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useActionState } from 'react';
+import { useState, useEffect, useActionState, useCallback } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,31 +24,31 @@ export function PatientClient() {
 
   const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
 
+  const handleDoctorMessage = useCallback(() => {
+    const message = localStorage.getItem('doctorMessage');
+    if(message) {
+      setDoctorMessage(message);
+      localStorage.removeItem('doctorMessage');
+      toast({ title: "New Message", description: "You have a new message from your doctor." });
+    }
+  }, [toast]);
+
   useEffect(() => {
-    const handleDoctorMessage = () => {
-      const message = localStorage.getItem('doctorMessage');
-      if(message) {
-        setDoctorMessage(message);
-        localStorage.removeItem('doctorMessage');
-        toast({ title: "New Message", description: "You have a new message from your doctor." });
-      }
-    };
-    
     handleDoctorMessage();
     
-    window.addEventListener('storage', (e) => {
+    const handleStorageEvent = (e: StorageEvent) => {
       if (e.key === 'doctorMessage') {
         handleDoctorMessage();
       }
-    });
+    };
+    
+    window.addEventListener('storage', handleStorageEvent);
 
     return () => {
-        window.removeEventListener('storage', (e) => {
-            if (e.key === 'doctorMessage') handleDoctorMessage();
-        });
+        window.removeEventListener('storage', handleStorageEvent);
     }
 
-  }, [toast]);
+  }, [handleDoctorMessage]);
   
   useEffect(() => {
     if (formState.status === 'success' && formState.audioUrl && formState.insights) {
