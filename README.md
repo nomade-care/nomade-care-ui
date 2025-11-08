@@ -1,5 +1,7 @@
 # NomadCare - AI-Powered Medical Communication Platform
 
+**📹 Demo Video Note:** The demonstration video appears in low quality when viewed on Google Drive. For the best experience, please download the video to see it in its original high-quality resolution.
+
 NomadCare is a modern, AI-driven web application designed to bridge communication gaps between doctors and patients, especially those who speak different languages. It provides separate portals for doctors and patients to exchange audio messages, leveraging generative AI for real-time translation and external emotion detection APIs for intelligent analysis.
 
 ## ✨ Key Features
@@ -71,6 +73,10 @@ Follow these instructions to get a local copy of the project up and running.
 6.  **Open the App**:
     Navigate to `http://localhost:9002` in your browser to see the application.
 
+## 📹 Demo Video
+
+A demonstration video of the application is available. **Important:** The video appears in low quality when viewed directly on Google Drive. For the best viewing experience, please download the video to see it in its original high-quality resolution.
+
 ## 📂 Project Structure
 
 -   `src/app/`: Contains the main pages and layouts for the Next.js App Router (`/`, `/doctor`, `/patient`).
@@ -84,3 +90,7 @@ Follow these instructions to get a local copy of the project up and running.
 -   `src/lib/`: Contains server actions (`actions.ts`), type definitions (`types.ts`), and other utility functions.
 -   `src/services/`: Services for communicating with external APIs, like the emotion detection service.
 -   `public/`: Static assets, including the logo and the sample audio files for the simulated conversation.
+
+---
+
+**📹 Demo Video Reminder:** Remember to download the demonstration video from Google Drive for the best quality viewing experience!
