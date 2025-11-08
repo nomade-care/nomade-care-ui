@@ -14,8 +14,10 @@ type AudioPlayerProps = {
 export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // We are creating a new Audio object, which is fine.
     // Don't add audioRef.current to dependency array, it will cause a loop.
     audioRef.current = new Audio(audioUrl);
@@ -28,7 +30,7 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
     return () => {
       audio.pause();
       audio.removeEventListener('ended', handleEnded);
-      audioRef.current = null;
+      // No need to nullify audioRef.current here as it will be handled by the component unmount
     };
   }, [audioUrl]);
 
@@ -46,6 +48,24 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
       setIsPlaying(!isPlaying);
     }
   };
+
+  if (!isMounted) {
+    return (
+        <div className={`flex items-center gap-3 ${colorClass}`}>
+            <Button
+                variant="ghost"
+                size="icon"
+                aria-label={'Play audio'}
+                disabled={true}
+            >
+                <Play className="h-6 w-6" />
+            </Button>
+            <div className="h-10 flex-1">
+                <Waveform data={waveform} />
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className={`flex items-center gap-3 ${colorClass}`}>

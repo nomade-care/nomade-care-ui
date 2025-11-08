@@ -1,8 +1,12 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+'use client';
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AudioPlayer } from "./AudioPlayer";
 import { Stethoscope, User } from "lucide-react";
 import type { ConversationMessage } from "@/lib/types";
 import { formatDistanceToNow } from 'date-fns';
+import { useState, useEffect } from 'react';
 
 type MessageBubbleProps = {
   message: ConversationMessage;
@@ -10,6 +14,11 @@ type MessageBubbleProps = {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isDoctor = message.from === 'doctor';
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div className={`flex items-end gap-3 ${isDoctor ? '' : 'flex-row-reverse'}`}>
@@ -27,7 +36,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           />
         </div>
         <span className="text-xs text-muted-foreground mt-1 px-1">
-          {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+           {isMounted ? formatDistanceToNow(new Date(message.timestamp), { addSuffix: true }) : ''}
         </span>
       </div>
     </div>
