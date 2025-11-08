@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <header className="mb-12 text-center">
-        <div className="flex justify-center items-center gap-4 mb-4">
+        <div className="flex justify-center items-center mb-4">
           <Logo className="h-16 w-auto" />
         </div>
         <p className="text-lg text-muted-foreground max-w-2xl">
