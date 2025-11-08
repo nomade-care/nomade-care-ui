@@ -49,7 +49,11 @@ export default function Home() {
       </main>
 
       <footer className="mt-12 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} NomadCare. Revolutionizing patient care.</p>
+        <div className="flex items-center justify-center gap-2">
+            <span>&copy; {new Date().getFullYear()}</span>
+            <Logo className="h-6 w-auto" />
+            <span>. Revolutionizing patient care.</span>
+        </div>
       </footer>
     </div>
   );
