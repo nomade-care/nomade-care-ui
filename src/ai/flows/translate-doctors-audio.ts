@@ -36,18 +36,15 @@ export async function translateDoctorsAudio(
   return translateDoctorsAudioFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'translateDoctorsAudioPrompt',
-  input: {schema: TranslateDoctorsAudioInputSchema},
-  output: {schema: TranslateDoctorsAudioOutputSchema},
-  prompt: `You are a medical translation expert. You will receive audio in one language and must return a translated audio in another language.
-
-  Translate the provided audio data to the specified patient language.
-
-  Audio: {{media url=audioDataUri}}
-  Patient Language: {{{patientLanguage}}}
-  Return only the translated audio data URI.
-`,
+const translationPrompt = ai.definePrompt({
+    name: 'translationPrompt',
+    input: { schema: z.object({ audioDataUri: z.string(), patientLanguage: z.string() }) },
+    output: { schema: z.string() },
+    prompt: `Translate the following transcription to {{patientLanguage}}.
+    
+    Transcription:
+    {{media url=audioDataUri}}
+    `
 });
 
 const translateDoctorsAudioFlow = ai.defineFlow(
@@ -57,13 +54,20 @@ const translateDoctorsAudioFlow = ai.defineFlow(
     outputSchema: TranslateDoctorsAudioOutputSchema,
   },
   async input => {
-    // Call the text-to-speech model to translate audio data to the patient's language
+    // 1. Transcribe the audio and translate it to the target language in one step
+    const translatedText = await translationPrompt(input);
+    
+    if (!translatedText) {
+        throw new Error('Could not translate the audio.');
+    }
+
+    // 2. Convert the translated text to speech
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
       config: {
         responseModalities: ['AUDIO'],
       },
-      prompt: `Translate to ${input.patientLanguage}. ${input.audioDataUri}`,
+      prompt: translatedText,
     });
 
     if (!media) {

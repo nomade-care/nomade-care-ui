@@ -16,20 +16,20 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (audioUrl) {
-      audioRef.current = new Audio(audioUrl);
-      
-      const currentAudioRef = audioRef.current;
+    // We are creating a new Audio object, which is fine.
+    // Don't add audioRef.current to dependency array, it will cause a loop.
+    audioRef.current = new Audio(audioUrl);
+    const audio = audioRef.current;
 
-      const handleEnded = () => setIsPlaying(false);
-      currentAudioRef.addEventListener('ended', handleEnded);
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
 
-      return () => {
-        currentAudioRef.pause();
-        currentAudioRef.removeEventListener('ended', handleEnded);
-        audioRef.current = null;
-      };
-    }
+    // Cleanup function
+    return () => {
+      audio.pause();
+      audio.removeEventListener('ended', handleEnded);
+      audioRef.current = null;
+    };
   }, [audioUrl]);
 
   const togglePlayPause = () => {
@@ -37,6 +37,10 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
       if (isPlaying) {
         audioRef.current.pause();
       } else {
+        // If audio has finished, load it again to play from the start
+        if(audioRef.current.ended) {
+          audioRef.current.load();
+        }
         audioRef.current.play();
       }
       setIsPlaying(!isPlaying);
