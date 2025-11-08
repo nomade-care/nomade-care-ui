@@ -12,10 +12,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzePatientsEmotionInputSchema = z.object({
-  audioDataUri: z
+  communicationData: z
     .string()
     .describe(
-      "The patient audio data as a data URI that must include a MIME type and use Base64 encoding. This can also be a string of text if the patient typed a response. Expected format: 'data:<mimetype>;base64,<encoded_data>' or a simple string."
+      "The patient's communication, which can be an audio data URI or a text string. Expected format: 'data:<mimetype>;base64,<encoded_data>' or a simple string."
     ),
 });
 export type AnalyzePatientsEmotionInput = z.infer<typeof AnalyzePatientsEmotionInputSchema>;
@@ -23,7 +23,7 @@ export type AnalyzePatientsEmotionInput = z.infer<typeof AnalyzePatientsEmotionI
 const AnalyzePatientsEmotionOutputSchema = z.object({
   emotionalInsights: z
     .string()
-    .describe('The emotional insights extracted from the patient audio or text.'),
+    .describe('A concise, structured summary of the patient\'s emotional state in markdown format.'),
 });
 export type AnalyzePatientsEmotionOutput = z.infer<typeof AnalyzePatientsEmotionOutputSchema>;
 
@@ -37,13 +37,21 @@ const prompt = ai.definePrompt({
   name: 'analyzePatientsEmotionPrompt',
   input: {schema: AnalyzePatientsEmotionInputSchema},
   output: {schema: AnalyzePatientsEmotionOutputSchema},
-  prompt: `You are an AI assistant specialized in analyzing patient audio and text for emotional content and providing emotional insights.
+  prompt: `You are an expert AI assistant with a high degree of emotional intelligence, specialized in analyzing patient communications for a medical setting. Your task is to analyze the provided patient communication (which could be audio or text) and generate concise, structured emotional insights for a doctor.
 
-  Analyze the patient's communication (which could be audio or text) and detect the emotions expressed. Provide structured emotional insights that doctors can use to better understand the patient's emotional state.
-  
-  If the input is a data URI, it is audio. If it is a plain string, it is text.
-  
-  Patient Communication: {{#if (startsWith audioDataUri "data:audio")}} {{media url=audioDataUri}} {{else}} {{{audioDataUri}}} {{/if}}`,
+  Based on the input, provide a summary of the patient's emotional state. Structure your output in markdown.
+
+  Example Output:
+  "
+  **Overall Emotion:** Happy (Confidence: 92%)
+
+  **Key Points:**
+  - The patient expresses positive sentiment.
+  - There are no signs of distress or anger.
+  - Vocal tone is calm and neutral.
+  "
+
+  Patient Communication: {{#if (startsWith communicationData "data:audio")}} {{media url=communicationData}} {{else}} {{{communicationData}}} {{/if}}`,
 });
 
 const analyzePatientsEmotionFlow = ai.defineFlow(

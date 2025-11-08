@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useActionState, useCallback } from 'react';
-import { Mic, Send, Bot, Square, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Mic, Send, Bot, Square, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import type { ConversationMessage } from '@/lib/types';
+import type { ConversationMessage, PatientResponsePayload } from '@/lib/types';
 import { sendDoctorAudio } from '@/lib/actions';
 import { Waveform } from '@/components/shared/Waveform';
 import { LanguageSelector } from '../shared/LanguageSelector';
@@ -51,8 +51,34 @@ export function DoctorClient() {
     } else if (status === 'error') {
       toast({ variant: 'destructive', title: "Error", description: message });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, message, originalAudioUrl, translatedAudioUrl]);
+  }, [status, message, originalAudioUrl, translatedAudioUrl, setConversation, toast]);
+  
+  useEffect(() => {
+    const handlePatientResponse = (e: StorageEvent) => {
+      if (e.key === 'patientResponse' && e.newValue) {
+        const payload: PatientResponsePayload = JSON.parse(e.newValue);
+        setEmotionalInsights(payload.insights);
+
+        // If the patient sent audio, add it to the conversation
+        if (payload.audioUrl) {
+          setConversation(prev => [...prev, { 
+            id: `patient-${Date.now()}`, 
+            from: 'patient', 
+            audioUrl: payload.audioUrl,
+            waveform: generateWaveform(payload.audioUrl, 50),
+            timestamp: Date.now()
+          }]);
+        }
+        toast({ title: 'Patient Responded', description: 'New emotional analysis available.' });
+      }
+    };
+
+    window.addEventListener('storage', handlePatientResponse);
+    return () => {
+      window.removeEventListener('storage', handlePatientResponse);
+    };
+  }, [setConversation, setEmotionalInsights, toast]);
+
 
   const startRecording = async () => {
     try {

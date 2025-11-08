@@ -8,5 +8,6 @@ export type ConversationMessage = {
 
 export type PatientResponsePayload = {
   audioUrl: string;
+  text: string;
   insights: string;
 };

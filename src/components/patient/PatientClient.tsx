@@ -1,32 +1,71 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
-import { AudioPlayer } from '@/components/shared/AudioPlayer';
-import { Bell, MessageCircle, Mic, Square, Trash2 } from 'lucide-react';
+import { Bell, MessageCircle, Mic, Send, Square, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { generateWaveform } from '@/lib/waveform';
 import { Waveform } from '../shared/Waveform';
 import { Textarea } from '../ui/textarea';
 import { simulatedConversation } from '@/lib/conversation-data';
-import type { ConversationMessage } from '@/lib/types';
+import type { ConversationMessage, PatientResponsePayload } from '@/lib/types';
 import { MessageBubble } from '../shared/MessageBubble';
 import { ScrollArea } from '../ui/scroll-area';
+import { sendPatientResponse } from '@/lib/actions';
 
 export function PatientClient() {
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
   const [conversation, setConversation] = useLocalStorage<ConversationMessage[]>('conversation', simulatedConversation);
   
   const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const { toast } = useToast();
+
+  const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
+  const { status, message, insights, originalResponse } = formState || { status: '', message: '' };
+
+  useEffect(() => {
+    if (status === 'success' && insights && originalResponse) {
+      const isAudio = originalResponse.startsWith('data:audio');
+      
+      if (isAudio) {
+        setConversation(prev => [...prev, { 
+          id: `patient-${Date.now()}`, 
+          from: 'patient', 
+          audioUrl: originalResponse, 
+          waveform: generateWaveform(originalResponse, 50),
+          timestamp: Date.now()
+        }]);
+      }
+
+      const patientPayload: PatientResponsePayload = {
+        audioUrl: isAudio ? originalResponse : '',
+        text: !isAudio ? originalResponse : '',
+        insights,
+      };
+
+      localStorage.setItem('patientResponse', JSON.stringify(patientPayload));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'patientResponse', newValue: JSON.stringify(patientPayload) }));
+      
+      clearRecording();
+      setResponseText('');
+      toast({ title: "Response Sent", description: "Your response has been sent to the doctor." });
+
+    } else if (status === 'error') {
+      toast({ variant: 'destructive', title: "Error", description: message });
+    }
+  }, [status, message, insights, originalResponse, setConversation, toast]);
+  
 
   const handleNewDoctorMessage = useCallback(() => {
     const lastMessage = conversation[conversation.length - 1];
@@ -41,7 +80,6 @@ export function PatientClient() {
       if (e.key === 'conversation') {
         const newConversation = JSON.parse(e.newValue || '[]');
         setConversation(newConversation);
-        handleNewDoctorMessage();
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -63,8 +101,10 @@ export function PatientClient() {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+        setResponseText(''); // Clear text if audio is recorded
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -89,9 +129,30 @@ export function PatientClient() {
   const clearRecording = () => {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
+    setAudioBlob(null);
   };
   
-  const lastDoctorMessage = [...conversation].reverse().find(m => m.from === 'doctor');
+  const blobToDataURL = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+  const handleSend = async (formData: FormData) => {
+    let communicationData = '';
+    if (audioBlob) {
+      communicationData = await blobToDataURL(audioBlob);
+    } else if (responseText) {
+      communicationData = responseText;
+    } else {
+      toast({ variant: 'destructive', title: "Error", description: "Please record or type a response." });
+      return;
+    }
+    formData.set('communicationData', communicationData);
+    formAction(formData);
+  };
 
   return (
     <div className="container mx-auto max-w-4xl py-8">
@@ -126,53 +187,66 @@ export function PatientClient() {
         </CardContent>
       </Card>
       
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Simulate a Response</CardTitle>
-          <CardDescription>Record a message or type a response to simulate sending a message to your doctor.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                {isRecording ? (
-                  <Button size="icon" onClick={stopRecording} className="bg-destructive hover:bg-destructive/90 rounded-full w-14 h-14" type="button">
-                    <Square />
-                  </Button>
-                ) : (
-                  <Button size="icon" onClick={startRecording} className="rounded-full w-14 h-14" type="button">
-                    <Mic />
-                  </Button>
-                )}
-                <div className="flex-1 h-14 bg-muted rounded-lg flex items-center px-4 gap-4">
-                  {audioUrl ? (
-                    <>
-                      <div className="h-10 flex-1 text-primary">
-                        <Waveform data={generateWaveform(audioUrl, 50)} />
-                      </div>
-                      <Button size="icon" variant="ghost" onClick={clearRecording} type="button">
-                        <Trash2 />
-                      </Button>
-                    </>
-                  ) : isRecording ? (
-                    <div className="flex items-center gap-2 text-destructive">
-                      <Mic className="animate-pulse" />
-                      <span>Recording...</span>
-                    </div>
+      <form action={handleSend} ref={formRef}>
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Send a Response</CardTitle>
+            <CardDescription>Record a message or type a response to send to your doctor.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  {isRecording ? (
+                    <Button size="icon" onClick={stopRecording} className="bg-destructive hover:bg-destructive/90 rounded-full w-14 h-14" type="button">
+                      <Square />
+                    </Button>
                   ) : (
-                    <p className="text-muted-foreground">Click the mic to start recording</p>
+                    <Button size="icon" onClick={startRecording} className="rounded-full w-14 h-14" type="button" disabled={!!responseText}>
+                      <Mic />
+                    </Button>
                   )}
+                  <div className="flex-1 h-14 bg-muted rounded-lg flex items-center px-4 gap-4">
+                    {audioUrl ? (
+                      <>
+                        <div className="h-10 flex-1 text-primary">
+                          <Waveform data={generateWaveform(audioUrl, 50)} />
+                        </div>
+                        <Button size="icon" variant="ghost" onClick={clearRecording} type="button">
+                          <Trash2 />
+                        </Button>
+                      </>
+                    ) : isRecording ? (
+                      <div className="flex items-center gap-2 text-destructive">
+                        <Mic className="animate-pulse" />
+                        <span>Recording...</span>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Click the mic to record or start typing below</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Textarea
+                    name="responseText"
+                    placeholder="Or type your response here..."
+                    className="bg-muted"
+                    value={responseText}
+                    onChange={(e) => {
+                      setResponseText(e.target.value);
+                      if (e.target.value) clearRecording(); // Clear audio if text is entered
+                    }}
+                  />
+                </div>
+                <div className='flex justify-end'>
+                  <Button type="submit" disabled={!audioBlob && !responseText}>
+                    <Send className='mr-2'/>
+                    Send Response
+                  </Button>
                 </div>
               </div>
-              <div>
-                <Textarea
-                  name="responseText"
-                  placeholder="Or type your response here..."
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
