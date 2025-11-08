@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -18,19 +19,15 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
 
   useEffect(() => {
     setIsMounted(true);
-    // We are creating a new Audio object, which is fine.
-    // Don't add audioRef.current to dependency array, it will cause a loop.
     audioRef.current = new Audio(audioUrl);
     const audio = audioRef.current;
 
     const handleEnded = () => setIsPlaying(false);
     audio.addEventListener('ended', handleEnded);
 
-    // Cleanup function
     return () => {
       audio.pause();
       audio.removeEventListener('ended', handleEnded);
-      // No need to nullify audioRef.current here as it will be handled by the component unmount
     };
   }, [audioUrl]);
 
@@ -38,14 +35,14 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        // If audio has finished, load it again to play from the start
         if(audioRef.current.ended) {
-          audioRef.current.load();
+          audioRef.current.currentTime = 0;
         }
         audioRef.current.play();
+        setIsPlaying(true);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
