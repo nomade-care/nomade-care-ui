@@ -13,6 +13,7 @@ import { sendPatientResponse } from '@/lib/actions';
 import { Bell, Loader2, MessageCircle, Send } from 'lucide-react';
 import type { PatientResponsePayload } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { generateWaveform } from '@/lib/waveform';
 
 export function PatientClient() {
   const [doctorMessage, setDoctorMessage] = useState<string | null>(null);
@@ -21,6 +22,8 @@ export function PatientClient() {
   const { toast } = useToast();
 
   const [formState, formAction] = useActionState(sendPatientResponse, { status: '', message: '' });
+  const { status, message, audioUrl, insights } = formState;
+
 
   const handleDoctorMessage = useCallback(() => {
     const message = localStorage.getItem('doctorMessage');
@@ -49,20 +52,20 @@ export function PatientClient() {
   }, [handleDoctorMessage]);
   
   useEffect(() => {
-    if (formState.status === 'success' && formState.audioUrl && formState.insights) {
+    if (status === 'success' && audioUrl && insights) {
       const patientResponse: PatientResponsePayload = {
-        audioUrl: formState.audioUrl,
-        insights: formState.insights,
+        audioUrl: audioUrl,
+        insights: insights,
       };
       localStorage.setItem('patientResponse', JSON.stringify(patientResponse));
       window.dispatchEvent(new StorageEvent('storage', { key: 'patientResponse', newValue: JSON.stringify(patientResponse) }));
       
       toast({ title: "Response Sent", description: "Your response has been sent to the doctor." });
       setSelectedResponse(null);
-    } else if (formState.status === 'error') {
-      toast({ variant: 'destructive', title: "Error", description: formState.message });
+    } else if (status === 'error') {
+      toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [formState, toast]);
+  }, [status, message, audioUrl, insights, toast]);
 
   return (
     <div className="container mx-auto max-w-2xl py-8">
@@ -82,7 +85,7 @@ export function PatientClient() {
         <CardContent>
           {doctorMessage ? (
             <div className="p-4 rounded-lg bg-muted">
-              <AudioPlayer audioUrl={doctorMessage} waveform={Array.from({ length: 50 }, () => Math.random())} />
+              <AudioPlayer audioUrl={doctorMessage} waveform={generateWaveform(doctorMessage, 50)} />
             </div>
           ) : (
             <Alert className="bg-background">
@@ -151,5 +154,3 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
     </Button>
   );
 }
-
-    

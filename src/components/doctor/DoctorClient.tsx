@@ -15,6 +15,7 @@ import { Waveform } from '@/components/shared/Waveform';
 import { LanguageSelector } from '../shared/LanguageSelector';
 import { MessageBubble } from '../shared/MessageBubble';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { generateWaveform } from '@/lib/waveform';
 
 export function DoctorClient() {
   const [isRecording, setIsRecording] = useState(false);
@@ -30,6 +31,8 @@ export function DoctorClient() {
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
 
   const [formState, formAction] = useActionState(sendDoctorAudio, { status: '', message: '' });
+  const { status, message, originalAudioUrl, translatedAudioUrl } = formState;
+
 
   const handlePatientResponse = useCallback(() => {
     const responseData = localStorage.getItem('patientResponse');
@@ -41,7 +44,7 @@ export function DoctorClient() {
               id: `patient-${Date.now()}`,
               from: 'patient',
               audioUrl,
-              waveform: Array.from({ length: 50 }, () => Math.random()),
+              waveform: generateWaveform(audioUrl, 50),
               timestamp: Date.now()
             }]);
             localStorage.removeItem('patientResponse');
@@ -66,25 +69,25 @@ export function DoctorClient() {
 
 
   useEffect(() => {
-    if (formState.status === 'success' && formState.originalAudioUrl) {
+    if (status === 'success' && originalAudioUrl) {
       setConversation(prev => [...prev, { 
         id: `doc-${Date.now()}`, 
         from: 'doctor', 
-        audioUrl: formState.originalAudioUrl!, 
-        waveform: Array.from({ length: 50 }, () => Math.random()), 
+        audioUrl: originalAudioUrl, 
+        waveform: generateWaveform(originalAudioUrl, 50), 
         timestamp: Date.now()
       }]);
       
-      const doctorMessage = formState.translatedAudioUrl;
+      const doctorMessage = translatedAudioUrl;
       localStorage.setItem('doctorMessage', doctorMessage!);
       window.dispatchEvent(new StorageEvent('storage', { key: 'doctorMessage', newValue: doctorMessage! }));
       
       clearRecording();
-      toast({ title: "Message Sent", description: formState.message });
-    } else if (formState.status === 'error') {
-      toast({ variant: 'destructive', title: "Error", description: formState.message });
+      toast({ title: "Message Sent", description: message });
+    } else if (status === 'error') {
+      toast({ variant: 'destructive', title: "Error", description: message });
     }
-  }, [formState, setConversation, toast]);
+  }, [status, message, originalAudioUrl, translatedAudioUrl, setConversation, toast]);
 
   const startRecording = async () => {
     try {
@@ -162,7 +165,7 @@ export function DoctorClient() {
               <div className="flex-1 h-14 bg-muted rounded-lg flex items-center px-4 gap-4">
                   {audioUrl ? (
                     <>
-                      <div className="h-10 flex-1 text-primary"><Waveform data={Array.from({ length: 50 }, () => Math.random())} /></div>
+                      <div className="h-10 flex-1 text-primary"><Waveform data={generateWaveform(audioUrl, 50)} /></div>
                       <Button size="icon" variant="destructive" onClick={clearRecording}><Trash2/></Button>
                     </>
                   ) : (
@@ -216,4 +219,3 @@ export function DoctorClient() {
     </div>
   );
 }
-    

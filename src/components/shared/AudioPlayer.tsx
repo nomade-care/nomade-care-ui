@@ -16,18 +16,20 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    audioRef.current = new Audio(audioUrl);
-    
-    const currentAudioRef = audioRef.current;
+    if (audioUrl) {
+      audioRef.current = new Audio(audioUrl);
+      
+      const currentAudioRef = audioRef.current;
 
-    const handleEnded = () => setIsPlaying(false);
-    currentAudioRef.addEventListener('ended', handleEnded);
+      const handleEnded = () => setIsPlaying(false);
+      currentAudioRef.addEventListener('ended', handleEnded);
 
-    return () => {
-      currentAudioRef.pause();
-      currentAudioRef.removeEventListener('ended', handleEnded);
-      audioRef.current = null;
-    };
+      return () => {
+        currentAudioRef.pause();
+        currentAudioRef.removeEventListener('ended', handleEnded);
+        audioRef.current = null;
+      };
+    }
   }, [audioUrl]);
 
   const togglePlayPause = () => {
@@ -48,6 +50,7 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
         size="icon"
         onClick={togglePlayPause}
         aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+        disabled={!audioUrl}
       >
         {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
       </Button>
