@@ -14,8 +14,6 @@ import { Bell, Loader2, MessageCircle, Send } from 'lucide-react';
 import type { PatientResponsePayload } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
-const generateWaveform = (length = 50) => Array.from({ length }, () => Math.random());
-
 export function PatientClient() {
   const [doctorMessage, setDoctorMessage] = useState<string | null>(null);
   const [patientLanguage, setPatientLanguage] = useLocalStorage<string>('patientLanguage', 'en');
@@ -84,7 +82,7 @@ export function PatientClient() {
         <CardContent>
           {doctorMessage ? (
             <div className="p-4 rounded-lg bg-muted">
-              <AudioPlayer audioUrl={doctorMessage} waveform={generateWaveform()} />
+              <AudioPlayer audioUrl={doctorMessage} waveform={Array.from({ length: 50 }, () => Math.random())} />
             </div>
           ) : (
             <Alert className="bg-background">
@@ -153,3 +151,5 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
     </Button>
   );
 }
+
+    

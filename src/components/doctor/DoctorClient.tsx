@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Mic, Send, Bot, Square, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,8 +15,6 @@ import { Waveform } from '@/components/shared/Waveform';
 import { LanguageSelector } from '../shared/LanguageSelector';
 import { MessageBubble } from '../shared/MessageBubble';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-
-const generateWaveform = (length = 50) => Array.from({ length }, () => Math.random());
 
 export function DoctorClient() {
   const [isRecording, setIsRecording] = useState(false);
@@ -42,10 +41,9 @@ export function DoctorClient() {
               id: `patient-${Date.now()}`,
               from: 'patient',
               audioUrl,
-              waveform: generateWaveform(),
+              waveform: Array.from({ length: 50 }, () => Math.random()),
               timestamp: Date.now()
             }]);
-            // Clear the response so it's not processed again
             localStorage.removeItem('patientResponse');
         } catch (error) {
             console.error("Failed to parse patient response", error);
@@ -54,7 +52,6 @@ export function DoctorClient() {
   }, [setConversation, setEmotionalInsights]);
 
   useEffect(() => {
-    // Listen for storage events from other tabs
     const handleStorageEvent = (e: StorageEvent) => {
         if (e.key === 'patientResponse') {
             handlePatientResponse();
@@ -74,7 +71,7 @@ export function DoctorClient() {
         id: `doc-${Date.now()}`, 
         from: 'doctor', 
         audioUrl: formState.originalAudioUrl!, 
-        waveform: generateWaveform(), 
+        waveform: Array.from({ length: 50 }, () => Math.random()), 
         timestamp: Date.now()
       }]);
       
@@ -165,7 +162,7 @@ export function DoctorClient() {
               <div className="flex-1 h-14 bg-muted rounded-lg flex items-center px-4 gap-4">
                   {audioUrl ? (
                     <>
-                      <div className="h-10 flex-1 text-primary"><Waveform data={generateWaveform()} /></div>
+                      <div className="h-10 flex-1 text-primary"><Waveform data={Array.from({ length: 50 }, () => Math.random())} /></div>
                       <Button size="icon" variant="destructive" onClick={clearRecording}><Trash2/></Button>
                     </>
                   ) : (
@@ -183,14 +180,13 @@ export function DoctorClient() {
                   <Button size="icon" onClick={stopRecording} className="bg-destructive hover:bg-destructive/90 rounded-full w-14 h-14">
                       <Square />
                   </Button>
-              ) : (
+              ) : audioUrl ? (
                   <form action={handleSend}>
                       <Button type="submit" size="icon" disabled={!audioBlob || pending} className="rounded-full w-14 h-14">
                           {pending ? <Loader2 className="animate-spin" /> : <Send />}
                       </Button>
                   </form>
-              )}
-               {!audioUrl && !isRecording && (
+              ) : (
                 <Button size="icon" onClick={startRecording} className="rounded-full w-14 h-14">
                     <Mic />
                 </Button>
@@ -220,3 +216,4 @@ export function DoctorClient() {
     </div>
   );
 }
+    
