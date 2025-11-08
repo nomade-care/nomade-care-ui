@@ -48,17 +48,23 @@ export function DoctorClient() {
 
   useEffect(() => {
     if (status === 'success' && originalAudioUrl && translatedAudioUrl) {
+      const newWaveform = generateWaveform(originalAudioUrl, 50);
+
       setConversation(prev => [...prev, { 
         id: `doc-${Date.now()}`, 
         from: 'doctor', 
         audioUrl: originalAudioUrl, 
-        waveform: generateWaveform(originalAudioUrl, 50), 
+        waveform: newWaveform, 
         timestamp: Date.now()
       }]);
       
       const doctorMessage = translatedAudioUrl;
-      localStorage.setItem('doctorMessage', doctorMessage);
-      window.dispatchEvent(new StorageEvent('storage', { key: 'doctorMessage', newValue: doctorMessage }));
+      const messagePayload = {
+          audioUrl: translatedAudioUrl,
+          waveform: newWaveform
+      };
+      localStorage.setItem('doctorMessage', JSON.stringify(messagePayload));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'doctorMessage', newValue: JSON.stringify(messagePayload) }));
       
       clearRecording();
       toast({ title: "Message Sent", description: message });
@@ -73,17 +79,6 @@ export function DoctorClient() {
       if (e.key === 'patientResponse' && e.newValue) {
         const payload: PatientResponsePayload = JSON.parse(e.newValue);
         setEmotionalInsights(payload.insights);
-
-        // If the patient sent audio, add it to the conversation
-        if (payload.audioUrl) {
-          setConversation(prev => [...prev, { 
-            id: `patient-${Date.now()}`, 
-            from: 'patient', 
-            audioUrl: payload.audioUrl,
-            waveform: generateWaveform(payload.audioUrl, 50),
-            timestamp: Date.now()
-          }]);
-        }
         toast({ title: 'Patient Responded', description: 'New emotional analysis available.' });
       }
     };
@@ -157,7 +152,7 @@ export function DoctorClient() {
           <div className="flex items-center gap-4">
               <LanguageSelector language={patientLanguage} onLanguageChange={setPatientLanguage} disabled={isRecording} />
               <div className="flex-1 h-14 bg-muted rounded-lg flex items-center px-4 gap-4">
-                  {audioUrl ? (
+                  {audioUrl && isMounted ? (
                     <>
                       <div className="h-10 flex-1 text-primary"><Waveform data={generateWaveform(audioUrl, 50)} /></div>
                       <Button size="icon" variant="destructive" onClick={clearRecording}><Trash2/></Button>

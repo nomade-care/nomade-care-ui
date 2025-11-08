@@ -1,21 +1,24 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { Waveform } from './Waveform';
 import { Button } from '../ui/button';
+import { analyzePatientAudio } from '@/lib/actions';
+import { usePathname } from 'next/navigation';
 
 type AudioPlayerProps = {
   audioUrl: string;
   waveform: number[];
   colorClass?: string;
+  isPatientMessage?: boolean;
 };
 
-export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }: AudioPlayerProps) {
+export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary", isPatientMessage = false }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
@@ -31,7 +34,7 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
     };
   }, [audioUrl]);
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -40,8 +43,16 @@ export function AudioPlayer({ audioUrl, waveform, colorClass = "text-primary" }:
         if(audioRef.current.ended) {
           audioRef.current.currentTime = 0;
         }
-        audioRef.current.play();
+        await audioRef.current.play();
         setIsPlaying(true);
+        
+        if (isPatientMessage && pathname.includes('/patient')) {
+            try {
+                await analyzePatientAudio(audioUrl);
+            } catch (error) {
+                console.error("Failed to analyze audio:", error);
+            }
+        }
       }
     }
   };

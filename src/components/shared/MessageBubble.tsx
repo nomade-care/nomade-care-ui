@@ -32,7 +32,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <AudioPlayer 
             audioUrl={message.audioUrl} 
             waveform={message.waveform} 
-            colorClass={isDoctor ? "text-foreground" : "text-primary"} 
+            colorClass={isDoctor ? "text-foreground" : "text-primary"}
+            isPatientMessage={!isDoctor}
           />
         </div>
         <span className="text-xs text-muted-foreground mt-1 px-1">
