@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { detectEmotionFromAudio, EmotionApiResponse } from '@/services/emotion-api';
 
 const AnalyzePatientsEmotionInputSchema = z.object({
   communicationData: z
@@ -33,26 +34,49 @@ export async function analyzePatientsEmotion(
   return analyzePatientsEmotionFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const emotionPrompt = ai.definePrompt({
   name: 'analyzePatientsEmotionPrompt',
-  input: {schema: AnalyzePatientsEmotionInputSchema},
+  input: {schema: z.union([
+    z.object({ communicationData: z.string() }),
+    z.object({ emotionData: z.any() })
+  ])},
   output: {schema: AnalyzePatientsEmotionOutputSchema},
-  prompt: `You are an expert AI assistant with a high degree of emotional intelligence, specialized in analyzing patient communications for a medical setting. Your task is to analyze the provided patient communication (which could be audio or text) and generate concise, structured emotional insights for a doctor.
+  prompt: `You are an expert AI assistant with a high degree of emotional intelligence, specialized in analyzing patient communications for a medical setting. Your task is to analyze the provided patient communication and generate concise, structured emotional insights for a doctor.
+
+  {{#if emotionData}}
+  An external API has analyzed the patient's audio and provided the following emotional analysis. Please interpret this data into a human-readable summary for the doctor. Highlight the primary emotion and confidence level.
+
+  Emotion API Data:
+  \`\`\`json
+  {{{jsonStringify emotionData}}}
+  \`\`\`
+  {{else}}
+  The patient provided a text response. Please analyze the following text for emotional tone and content.
+  
+  Patient Text: "{{{communicationData}}}"
+  {{/if}}
 
   Based on the input, provide a summary of the patient's emotional state. Structure your output in markdown.
 
-  Example Output:
+  Example Output for Audio:
   "
   **Overall Emotion:** Happy (Confidence: 92%)
 
   **Key Points:**
-  - The patient expresses positive sentiment.
-  - There are no signs of distress or anger.
-  - Vocal tone is calm and neutral.
+  - The patient's voice indicates a positive emotional state.
+  - No signs of distress or anger were detected.
   "
 
-  Patient Communication: {{#if (startsWith communicationData "data:audio")}} {{media url=communicationData}} {{else}} {{{communicationData}}} {{/if}}`,
+  Example Output for Text:
+  "
+  **Overall Tone:** Positive
+
+  **Key Points:**
+  - The patient expresses contentment with their progress.
+  - They mention feeling better and ask a follow-up question.
+  "`,
 });
+
 
 const analyzePatientsEmotionFlow = ai.defineFlow(
   {
@@ -60,8 +84,20 @@ const analyzePatientsEmotionFlow = ai.defineFlow(
     inputSchema: AnalyzePatientsEmotionInputSchema,
     outputSchema: AnalyzePatientsEmotionOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input) => {
+    const isAudio = input.communicationData.startsWith('data:audio');
+    let promptInput;
+
+    if (isAudio) {
+      // Call the external emotion API for audio data
+      const emotionData = await detectEmotionFromAudio(input.communicationData);
+      promptInput = { emotionData };
+    } else {
+      // Use text directly for text data
+      promptInput = { communicationData: input.communicationData };
+    }
+
+    const {output} = await emotionPrompt(promptInput);
     return output!;
   }
 );
